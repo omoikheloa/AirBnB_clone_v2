@@ -27,6 +27,19 @@ class FileStorage:
                 {obj.to_dict()['__class__'] + '.' + obj.id: obj}
                 )
 
+    def __init__(self):
+        """Initializes a FileStorage instance"""
+        super().__init__()
+        self.model_classes = {
+            'BaseModel': import_module('models.base_model').BaseModel,
+            'User': import_module('models.user').User,
+            'State': import_module('models.state').State,
+            'City': import_module('models.city').City,
+            'Amenity': import_module('models.amenity').Amenity,
+            'Place': import_module('models.place').Place,
+            'Review': import_module('models.review').Review
+        }
+
     def save(self):
         """Saves storage dictionary to file"""
         with open(self.__file_path, 'w') as f:
