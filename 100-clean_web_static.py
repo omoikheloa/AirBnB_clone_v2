@@ -1,34 +1,40 @@
 #!/usr/bin/python3
-"""web server distribution"""
-from fabric.api import *
-from fabric.state import commands, connections
-import os.path
+"""
+Deletes out-of-date archives
+fab -f 100-clean_web_static.py do_clean:number=2
+    -i ssh-key -u ubuntu > /dev/null 2>&1
+"""
 
-env.user = 'ubuntu'
-env.hosts = ["52.91.144.226", "54.237.31.63"]
-env.key_filename = "~/school"
+import os
+from fabric.api import *
+
+env.hosts = ['52.91.144.226', '54.237.31.63']
 
 
 def do_clean(number=0):
-    """deletes out-of-date archives"""
-    local('ls -t ~/AirBnB_Clone_V2/versions/').split()
+    """Delete out-of-date archives.
+
+    Args:
+        number (int): The number of archives to keep.
+            If number is 0 or 1, keeps only the most recent archive.
+            If number is 2, keeps the most and second-most recent archives, etc.
+    """
+    number = 1 if int(number) == 0 else int(number)
+
+    # Delete local archives
+    local_archives = sorted(os.listdir("versions"))
+    archives_to_keep = local_archives[-number:]
+    for archive in local_archives:
+        if archive not in archives_to_keep:
+            local("rm -f ./versions/{}".format(archive))
+
+    # Delete remote archives
     with cd("/data/web_static/releases"):
-        target_R = sudo("ls -t .").split()
-    paths = "/data/web_static/releases"
-    number = int(number)
-    if number == 0:
-        num = 1
-    else:
-        num = number
-    if len(target_R) > 0:
-        if len(target) == number or len(target) == 0:
-            pass
-        else:
-            cl = target[num:]
-            for i in range(len(cl)):
-                local('rm -f ~/AirBnB_Clone_V2/versions/{}'.format(target[-1]))
-        rem = target_R[num:]
-        for j in range(len(rem)):
-            sudo('rm -rf {}/{}'.format(paths, rem[-1].strip(".tgz")))
-    else:
-        pass
+        remote_archives = run("ls -tr").split()
+        remote_archives = [a for a in remote_archives if "web_static_" in a]
+        archives_to_keep = remote_archives[-number:]
+        for archive in remote_archives:
+            if archive not in archives_to_keep:
+                run("rm -rf ./{}".format(archive))
+
+    print("Cleanup completed successfully.")
