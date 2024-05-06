@@ -9,25 +9,28 @@ execute: fab -f 3-deploy_web_static.py deploy -i ~/.ssh/id_rsa -u ubuntu
 from fabric.api import env, local, put, run
 from datetime import datetime
 from os.path import exists, isdir
+
 env.hosts = ['52.91.144.226', '54.237.31.63']
 
 
 def do_pack():
-    """generates a tgz archive"""
+    """Generates a tgz archive of the web_static folder"""
     try:
         date = datetime.now().strftime("%Y%m%d%H%M%S")
         if isdir("versions") is False:
-            local("mkdir versions")
+            local("mkdir -p versions")
         file_name = "versions/web_static_{}.tgz".format(date)
         local("tar -cvzf {} web_static".format(file_name))
         return file_name
-    except:
+    except Exception as e:
+        print("An error occurred while creating the archive:", e)
         return None
 
 
 def do_deploy(archive_path):
-    """distributes an archive to the web servers"""
-    if exists(archive_path) is False:
+    """Distributes an archive to the web servers"""
+    if not exists(archive_path):
+        print("Archive does not exist:", archive_path)
         return False
     try:
         file_n = archive_path.split("/")[-1]
@@ -42,13 +45,15 @@ def do_deploy(archive_path):
         run('rm -rf /data/web_static/current')
         run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
         return True
-    except:
+    except Exception as e:
+        print("An error occurred while deploying the archive:", e)
         return False
 
 
 def deploy():
-    """creates and distributes an archive to the web servers"""
+    """Creates and distributes an archive to the web servers"""
     archive_path = do_pack()
     if archive_path is None:
+        print("Packaging of the archive failed.")
         return False
     return do_deploy(archive_path)
